@@ -16,7 +16,8 @@ int         current_id = 0, maxfd = 0;
 char        *send_buf, *recv_buf;
 
 void err(char *m) {
-    write(2, m ? m : "Fatal error\n", strlen(m ? m : "Fatal error\n"));
+    char *fatal = "Fatal error\n"
+    write(2, m ? m : fatal, strlen(m ? m : fatal));
     exit(1);
 }
 
@@ -48,6 +49,7 @@ int main(int ac, char **av) {
   
     if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) != 0 || listen(sockfd, 10) != 0)
         err(NULL);
+
     FD_ZERO(&current);
     FD_SET(sockfd, &current);
     maxfd = sockfd;
@@ -55,9 +57,12 @@ int main(int ac, char **av) {
         read_set = write_set = current;
         if (select(maxfd + 1, &read_set, &write_set, NULL, NULL) < 0)
             err(NULL);
+        
         for(int fd = 0; fd <= maxfd; fd++) {
+
             if (!FD_ISSET(fd, &read_set))
                 continue;
+
             if (fd == sockfd) {
                 socklen_t len = sizeof(cli);
                 connfd = accept(sockfd, (struct sockaddr *)&cli, &len);
@@ -75,6 +80,7 @@ int main(int ac, char **av) {
             }
             else {
                 int ret = recv(fd, recv_buf, max_m, 0);
+                
                 if (ret <= 0) {
                     sprintf(send_buf, "server: client %d just left\n", clients[fd].id);
                     send_broadcast(fd);
